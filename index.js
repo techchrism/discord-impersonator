@@ -45,7 +45,16 @@ async function writeDefaultConfig()
 {
     return fs.writeFile(argv.config || 'config.json', JSON.stringify({
         token: '',
-        model: ''
+        model: '',
+        prefix: '',
+        'pit-emoji': {
+            name: '',
+            id: ''
+        },
+        'pit-question-emoji': {
+            name: '',
+            id: ''
+        }
     }, null, 4));
 }
 
@@ -89,15 +98,23 @@ loadConfig().then(config =>
         const db = low(adapter);
     
         db.defaults({
-            messageChannels: []
+            messageChannels: [],
+            pitChannels: [],
+            emojiOrder: {}
         }).write();
     
         function inMessageChannel(msg)
         {
             return db.get('messageChannels').value().indexOf(msg.channel.id) !== -1;
         }
+    
+        function inPitChannel(msg)
+        {
+            return db.get('pitChannels').value().indexOf(msg.channel.id) !== -1;
+        }
         
         let waitingForResponse = false;
+        let previousReaction = null;
         let client = new Discord.Client();
         client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
         {
@@ -123,7 +140,7 @@ loadConfig().then(config =>
                 return;
             }
     
-            if(msg.content === config.prefix + 'toggle')
+            if(msg.content === config.prefix + 'toggle-msg')
             {
                 if(msg.channel.type === 'text')
                 {
@@ -147,6 +164,32 @@ loadConfig().then(config =>
                     msg.reply('Goodbye');
                 }
             }
+            else if(msg.content === config.prefix + 'toggle-pit')
+            {
+                if(msg.channel.type === 'text')
+                {
+                    if(msg.guild.owner.id !== msg.member.id)
+                    {
+                        msg.reply('Sorry, you must be the owner of this server to do that!');
+                        return;
+                    }
+                }
+        
+                if(!inPitChannel(msg))
+                {
+                    db.get('pitChannels').push(msg.channel.id).write();
+                    db.get('emojiOrder').set(msg.channel.id, []).write();
+                    logger.info(`Added pit channel - ${msg.channel.name}`);
+                    msg.reply('Added pit channel');
+                }
+                else
+                {
+                    db.get('pitChannels').pull(msg.channel.id).write();
+                    db.get('emojiOrder').unset(msg.channel.id).write();
+                    logger.info(`Removed pit channel - ${msg.channel.name}`);
+                    msg.reply('Removed pit channel');
+                }
+            }
             else if(inMessageChannel(msg) && msg.content && msg.content.length > 0)
             {
                 if(!waitingForResponse)
@@ -159,6 +202,70 @@ loadConfig().then(config =>
                     waitingForResponse = false;
                     logger.info(`[${msg.channel.name}] Bot > ${response}`);
                     msg.channel.send(response);
+                }
+            }
+            else if(inPitChannel(msg) && msg.content && msg.content.length > 0)
+            {
+                if(previousReaction !== null)
+                {
+                    // Remove own reactions from previous message
+                    previousReaction.reactions.cache.array().filter(r => r.me).forEach(r => r.remove());
+                    previousReaction = null;
+                }
+                if(msg.content === '[pit-sync]')
+                {
+                    // Sync reactions in pit so the order stays consistent
+                    logger.info(`Running pit sync in ${msg.channel.name}`);
+                    msg.react(config['pit-emoji'].id);
+                    previousReaction = msg;
+                    setTimeout(() =>
+                    {
+                        const reactions = msg.reactions.cache.array().map(r => r.emoji);
+                        const sorted = reactions.map(e => e.name).sort();
+                        logger.info(`Sorted: ${JSON.stringify(sorted)}`);
+                        db.get('emojiOrder').set(msg.channel.id, sorted).write();
+                    }, 2000);
+                }
+                else
+                {
+                    const order = db.get('emojiOrder').get(msg.channel.id).value();
+                    if(order.length === 0)
+                    {
+                        return;
+                    }
+                    if(order[0] === config['pit-emoji'].name)
+                    {
+                        setTimeout(() =>
+                        {
+                            previousReaction = msg;
+                            msg.react(config['pit-emoji'].id);
+                        }, 250);
+                    }
+                    else
+                    {
+                        const before = order[order.indexOf(config['pit-emoji'].name) - 1];
+                        const filter = r => r.emoji.name === before;
+                        const collector = msg.createReactionCollector(filter, {time: 2000});
+                        collector.on('collect', r =>
+                        {
+                            previousReaction = msg;
+                            msg.react(config['pit-emoji'].id).then(() =>
+                            {
+                                // If it's the last in the order, respond with the question
+                                if(order.indexOf(config['pit-emoji'].name) === order.length - 1)
+                                {
+                                    msg.react(config['pit-question-emoji'].id);
+                                }
+                            });
+                        });
+                        collector.on('end', collected =>
+                        {
+                            if(collected.size === 0)
+                            {
+                                logger.warn('Did not collect reaction in time');
+                            }
+                        });
+                    }
                 }
             }
         });
