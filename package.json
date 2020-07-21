@@ -18,6 +18,7 @@
     "utf-8-validate": "^5.0.2",
     "winston": "^3.3.3",
     "winston-daily-rotate-file": "^4.5.0",
+    "yargs": "^15.4.1",
     "zlib-sync": "^0.1.7"
   }
 }

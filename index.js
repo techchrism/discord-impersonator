@@ -6,13 +6,26 @@ const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf} = format;
 require('winston-daily-rotate-file');
 const GPT2Chat = require('./gpt2-chat.js');
+const {argv} = require('yargs').option('config', {
+    alias: 'c',
+    type: 'string',
+    description: 'The path of the config.json file to use'
+}).option('logs', {
+    alias: 'l',
+    type: 'string',
+    description: 'The path of the directory to use for logging'
+}).option('database', {
+    alias: 'd',
+    type: 'string',
+    description: 'The path of the db.json file to use'
+});
 
 // Begin logging
 const fileTransport = new (transports.DailyRotateFile)({
     filename: '%DATE%.log',
     datePattern: 'YYYY-MM-DD',
     zippedArchive: true,
-    dirname: 'logs'
+    dirname: argv.logs || 'logs'
 });
 const myFormat = printf(({ level, message, timestamp }) => {
     return `${timestamp} [${level}]: ${message}`;
@@ -30,7 +43,7 @@ const logger = createLogger({
 
 async function writeDefaultConfig()
 {
-    return fs.writeFile('config.json', JSON.stringify({
+    return fs.writeFile(argv.config || 'config.json', JSON.stringify({
         token: '',
         model: ''
     }, null, 4));
@@ -41,7 +54,7 @@ async function loadConfig()
     let fileText = '';
     try
     {
-        fileText = await fs.readFile('config.json', 'utf8');
+        fileText = await fs.readFile(argv.config || 'config.json', 'utf8');
     }
     catch(e)
     {
@@ -58,7 +71,7 @@ async function loadConfig()
     {
         const newName = `config-broken-${Date.now()}.json`;
         logger.error(`Could not parse config! Moved to ${newName}`);
-        await fs.rename('config.json', newName);
+        await fs.rename(argv.config || 'config.json', newName);
         await writeDefaultConfig();
         throw e;
     }
@@ -72,7 +85,7 @@ loadConfig().then(config =>
     chat.on('ready', () =>
     {
         logger.info('Chat ready');
-        const adapter = new FileSync('db.json');
+        const adapter = new FileSync(argv.database || 'db.json');
         const db = low(adapter);
     
         db.defaults({

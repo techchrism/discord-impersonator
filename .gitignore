@@ -1,6 +1,6 @@
 .idea
 node_modules
 config*.json
-logs
-db.json
+logs*
+db*.json
 models
