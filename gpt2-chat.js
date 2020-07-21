@@ -6,6 +6,8 @@ class GPT2Chat extends EventEmitter
     constructor(modelName, logger)
     {
         super();
+        this.logger = logger;
+        this.conversation = ['subject: hello'];
         this.shell = spawn('python', ['gpt-2/chat.py', `--model_name=${modelName}`, `--seed=${Math.round(Math.random() * 100000)}`]);
     
         let chatFlag = false;
@@ -15,7 +17,7 @@ class GPT2Chat extends EventEmitter
             const strData = data.toString();
             if(first)
             {
-                logger.info(strData);
+                logger.info(`data: ${strData}`);
             }
             if(chatFlag)
             {
@@ -45,10 +47,22 @@ class GPT2Chat extends EventEmitter
     {
         return new Promise(resolve =>
         {
-            this.shell.stdin.write(message + "\n");
-            this.once('message', message =>
+            this.conversation.push(`other: ${message}`);
+            if(this.conversation.length > 5)
             {
-                resolve(message);
+                this.conversation.shift();
+            }
+            this.shell.stdin.write(Buffer.from(this.conversation.join('\n') + '\nsubject: ')
+                                          .toString('base64') + "\n");
+            this.once('message', response =>
+            {
+                const responseStr = Buffer.from(response, 'base64').toString();
+                this.conversation.push(`subject: ${responseStr}`);
+                if(this.conversation.length > 5)
+                {
+                    this.conversation.shift();
+                }
+                resolve(responseStr);
             });
         });
     }

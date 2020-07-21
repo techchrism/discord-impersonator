@@ -7,6 +7,7 @@ import sys
 import numpy as np
 import tensorflow as tf
 import codecs
+import base64
 
 import model, sample, encoder
 
@@ -50,35 +51,21 @@ def interact_model(
             message = None
             while not message:
                 message = input("other: ")
-            conversation = conversation + "\nother: " + message
-            conversation = conversation + "\nsubject: "
+            conversation = base64.b64decode(message).decode("utf-8")
             sys.stdout.write("subject: ")
             sys.stdout.flush()
 
-            #sys.stderr.write("************************"+conversation+"***********************")
-            #sys.stderr.flush()
-
             encoded_conversation = enc.encode(conversation)
-            #print(len(encoded_conversation))
             result = sess.run(output, feed_dict={
                 context: [encoded_conversation]
             })[:, len(encoded_conversation):]
             text = enc.decode(result[0])
 
-            #sys.stderr.write("=============="+text+"=================")
-            #sys.stderr.flush()
-
             splits = text.split('\n')
-            #line = splits[1] if len(splits)>1 else splits[0]
-            #parts = line.split(': ')
-            #reply = parts[1] if len(parts)>1 else parts[0]
             reply = splits[0]
-            sys.stdout.write(reply)
+            sys.stdout.write(base64.b64encode(reply.encode("utf-8")).decode("utf-8"))
             sys.stdout.write('\n')
             sys.stdout.flush()
-            conversation = conversation + reply
-            if len(conversation) > 200:
-                conversation = conversation[len(conversation) - 200]
 
 if __name__ == '__main__':
     fire.Fire(interact_model)
