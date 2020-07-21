@@ -1,6 +1,7 @@
 const fs = require('fs').promises;
 const Discord = require('discord.js');
 const low = require('lowdb');
+const seedrandom = require('seedrandom');
 const FileSync = require('lowdb/adapters/FileSync');
 const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf} = format;
@@ -307,6 +308,14 @@ loadConfig().then(config =>
                     return;
                 }
                 
+                // Use the message id as a seed to ensure only one bot responds
+                const rng = seedrandom(msg.id);
+                const order = db.get('emojiOrder').get(msg.channel.id).value();
+                const randomEmojiName = order[Math.floor(rng() * order.length)];
+                if(config['pit-emoji'].name === randomEmojiName)
+                {
+                    botRespond(msg);
+                }
             }
         });
     });
