@@ -6,9 +6,9 @@ class GPT2Chat extends EventEmitter
     constructor(modelName, logger)
     {
         super();
-        this.logger = logger;
-        this.conversation = ['subject: hello'];
-        this.shell = spawn('python', ['gpt-2/chat.py', `--model_name=${modelName}`, `--seed=${Math.round(Math.random() * 100000)}`]);
+        this.conversations = {};
+        this.conversationLength = 10;
+        this.shell = spawn('python', ['gpt-2/chat.py', `--model_name=${modelName}`,`--seed=${Math.round(Math.random() * 100000)}`]);
     
         let chatFlag = false;
         let first = true;
@@ -17,7 +17,8 @@ class GPT2Chat extends EventEmitter
             const strData = data.toString();
             if(first)
             {
-                logger.info(`data: ${strData}`);
+                // If the script is still starting, log stdout
+                logger.info(strData);
             }
             if(chatFlag)
             {
@@ -26,6 +27,7 @@ class GPT2Chat extends EventEmitter
             }
             else if(strData.endsWith('other: '))
             {
+                // Use the first occurrence of the "other: " string to check when the script has started
                 if(first)
                 {
                     first = false;
@@ -34,6 +36,7 @@ class GPT2Chat extends EventEmitter
             }
             else if(strData === 'subject: ')
             {
+                // Flag that indicates the next output will be bot chat
                 chatFlag = true;
             }
         });
@@ -43,25 +46,36 @@ class GPT2Chat extends EventEmitter
         });
     }
     
-    send(message)
+    send(message, key)
     {
         return new Promise(resolve =>
         {
-            this.conversation.push(`other: ${message}`);
-            if(this.conversation.length > 5)
+            // Get the conversation for the given key or create one if it doesn't exist
+            if(!key)
             {
-                this.conversation.shift();
+                key = 'no-key';
             }
-            this.shell.stdin.write(Buffer.from(this.conversation.join('\n') + '\nsubject: ')
+            if(!this.conversations.hasOwnProperty(key))
+            {
+                this.conversations[key] = ['subject: hello'];
+            }
+            
+            // Add this message to the conversation and trim the conversation if it's too long
+            this.conversations[key].push(`other: ${message}`);
+            while(this.conversations[key].length > this.conversationLength)
+            {
+                this.conversations[key].shift();
+            }
+            
+            // Write the base64 encoded conversation with the "subject: " prompt
+            this.shell.stdin.write(Buffer.from(this.conversations[key].join('\n') + '\nsubject: ')
                                           .toString('base64') + "\n");
+            
+            // When a message is received, decode it, add it to the conversation, and resolve the promise
             this.once('message', response =>
             {
                 const responseStr = Buffer.from(response, 'base64').toString();
-                this.conversation.push(`subject: ${responseStr}`);
-                if(this.conversation.length > 5)
-                {
-                    this.conversation.shift();
-                }
+                this.conversations[key].push(`subject: ${responseStr}`);
                 resolve(responseStr);
             });
         });
