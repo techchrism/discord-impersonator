@@ -1,4 +1,7 @@
 const fs = require('fs').promises;
+const Discord = require('discord.js');
+const low = require('lowdb');
+const FileSync = require('lowdb/adapters/FileSync');
 const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf} = format;
 require('winston-daily-rotate-file');
@@ -23,7 +26,6 @@ const logger = createLogger({
         fileTransport
     ]
 });
-logger.info("Started logging");
 
 async function writeDefaultConfig()
 {
@@ -63,7 +65,26 @@ async function loadConfig()
 loadConfig().then(config =>
 {
     logger.info('Loaded config');
+    const adapter = new FileSync('db.json');
+    const db = low(adapter);
+    
+    
+    
+    let client = new Discord.Client();
+    client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
+    {
+        logger.error('Error logging in');
+        logger.error(e);
+    });
+    client.on('shardError', error =>
+    {
+        logger.error('Websocket error', error);
+    });
+    process.on('unhandledRejection', error =>
+    {
+        logger.error('Unhandled promise rejection:', error);
+    });
+    
 }).catch(e =>
 {
-
 });
