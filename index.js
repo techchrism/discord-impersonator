@@ -84,6 +84,7 @@ loadConfig().then(config =>
             return db.get('messageChannels').value().indexOf(msg.channel.id) !== -1;
         }
         
+        let waitingForResponse = false;
         let client = new Discord.Client();
         client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
         {
@@ -102,7 +103,7 @@ loadConfig().then(config =>
         {
             logger.info(`Logged in as ${client.user.tag}!`);
         });
-        client.on('message', msg =>
+        client.on('message', async msg =>
         {
             if(msg.member.id === client.user.id)
             {
@@ -123,12 +124,28 @@ loadConfig().then(config =>
                 if(!inMessageChannel(msg))
                 {
                     db.get('messageChannels').push(msg.channel.id).write();
+                    logger.info(`Added message channel - ${msg.channel.name}`);
                     msg.reply('Hello');
                 }
                 else
                 {
                     db.get('messageChannels').pull(msg.channel.id).write();
+                    logger.info(`Removed message channel - ${msg.channel.name}`);
                     msg.reply('Goodbye');
+                }
+            }
+            else if(inMessageChannel(msg))
+            {
+                if(!waitingForResponse)
+                {
+                    logger.info(`${msg.member.displayName} > ${msg.content}`);
+                    waitingForResponse = true;
+                    msg.channel.startTyping();
+                    const response = await chat.send(msg.content);
+                    msg.channel.stopTyping();
+                    waitingForResponse = false;
+                    logger.info(`Bot > ${response}`);
+                    msg.channel.send(response);
                 }
             }
         });

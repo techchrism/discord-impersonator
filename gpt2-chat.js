@@ -13,7 +13,7 @@ class GPT2Chat extends EventEmitter
         this.shell.stdout.on('data', data =>
         {
             const strData = data.toString();
-            if(!first)
+            if(first)
             {
                 logger.info(strData);
             }
@@ -45,7 +45,7 @@ class GPT2Chat extends EventEmitter
     {
         return new Promise(resolve =>
         {
-            shell.stdin.write(message + "\n");
+            this.shell.stdin.write(message + "\n");
             this.once('message', message =>
             {
                 resolve(message);
