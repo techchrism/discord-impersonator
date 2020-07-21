@@ -114,12 +114,12 @@ loadConfig().then(config =>
             return db.get('pitChannels').value().indexOf(msg.channel.id) !== -1;
         }
         
-        async function botRespond(msg)
+        async function botRespond(msg, ignoreAdd)
         {
             logger.info(`[${msg.channel.name}] ${msg.member.displayName} > ${msg.content}`);
             waitingForResponse = true;
             msg.channel.startTyping();
-            const response = await chat.send(msg.content, msg.channel.name);
+            const response = await chat.send(msg.content, msg.channel.id, ignoreAdd);
             msg.channel.stopTyping();
             waitingForResponse = false;
             logger.info(`[${msg.channel.name}] Bot > ${response}`);
@@ -202,7 +202,7 @@ loadConfig().then(config =>
             {
                 if(!waitingForResponse)
                 {
-                    botRespond(msg);
+                    botRespond(msg, false);
                 }
             }
             else if(inPitChannel(msg) && msg.content && msg.content.length > 0)
@@ -213,6 +213,7 @@ loadConfig().then(config =>
                     previousReaction.reactions.cache.array().filter(r => r.me).forEach(r => r.remove());
                     previousReaction = null;
                 }
+                
                 if(msg.content === '[pit-sync]' && msg.member.id !== client.user.id)
                 {
                     // Sync reactions in pit so the order stays consistent
@@ -229,6 +230,12 @@ loadConfig().then(config =>
                 }
                 else
                 {
+                    // Add message to context
+                    if(msg.member.id !== client.user.id)
+                    {
+                        chat.addToConversation(msg.content, msg.channel.id);
+                    }
+                    
                     const order = db.get('emojiOrder').get(msg.channel.id).value();
                     if(order.length === 0)
                     {
@@ -293,16 +300,16 @@ loadConfig().then(config =>
             
             if(reaction.emoji.name === config['pit-emoji'].name)
             {
-                reaction.remove();
+                await reaction.remove();
                 if(waitingForResponse)
                 {
                     return;
                 }
-                botRespond(msg);
+                botRespond(msg, true);
             }
             else if(reaction.emoji.name === config['pit-question-emoji'].name)
             {
-                reaction.remove();
+                await reaction.remove();
                 if(waitingForResponse)
                 {
                     return;
@@ -314,9 +321,12 @@ loadConfig().then(config =>
                 const randomEmojiName = order[Math.floor(rng() * order.length)];
                 if(config['pit-emoji'].name === randomEmojiName)
                 {
-                    botRespond(msg);
+                    botRespond(msg, true);
                 }
             }
+            
+            // Remove own reactions
+            msg.reactions.cache.array().filter(r => r.me).forEach(r => r.remove());
         });
     });
 }).catch(e =>

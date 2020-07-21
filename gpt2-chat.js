@@ -46,25 +46,13 @@ class GPT2Chat extends EventEmitter
         });
     }
     
-    send(message, key)
+    send(message, key, ignoreAdd)
     {
         return new Promise(resolve =>
         {
-            // Get the conversation for the given key or create one if it doesn't exist
-            if(!key)
+            if(!ignoreAdd)
             {
-                key = 'no-key';
-            }
-            if(!this.conversations.hasOwnProperty(key))
-            {
-                this.conversations[key] = ['subject: hello'];
-            }
-            
-            // Add this message to the conversation and trim the conversation if it's too long
-            this.conversations[key].push(`other: ${message}`);
-            while(this.conversations[key].length > this.conversationLength)
-            {
-                this.conversations[key].shift();
+                this.addToConversation(message, key);
             }
             
             // Write the base64 encoded conversation with the "subject: " prompt
@@ -79,6 +67,26 @@ class GPT2Chat extends EventEmitter
                 resolve(responseStr);
             });
         });
+    }
+    
+    addToConversation(message, key)
+    {
+        // Get the conversation for the given key or create one if it doesn't exist
+        if(!key)
+        {
+            key = 'no-key';
+        }
+        if(!this.conversations.hasOwnProperty(key))
+        {
+            this.conversations[key] = ['subject: hello'];
+        }
+    
+        // Add this message to the conversation and trim the conversation if it's too long
+        this.conversations[key].push(`other: ${message}`);
+        while(this.conversations[key].length > this.conversationLength)
+        {
+            this.conversations[key].shift();
+        }
     }
 }
 
