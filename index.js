@@ -134,7 +134,7 @@ loadConfig().then(config =>
                     msg.reply('Goodbye');
                 }
             }
-            else if(inMessageChannel(msg))
+            else if(inMessageChannel(msg) && msg.content && msg.content.length > 0)
             {
                 if(!waitingForResponse)
                 {
