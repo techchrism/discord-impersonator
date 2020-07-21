@@ -151,13 +151,13 @@ loadConfig().then(config =>
             {
                 if(!waitingForResponse)
                 {
-                    logger.info(`${msg.member.displayName} > ${msg.content}`);
+                    logger.info(`[${msg.channel.name}] ${msg.member.displayName} > ${msg.content}`);
                     waitingForResponse = true;
                     msg.channel.startTyping();
-                    const response = await chat.send(msg.content);
+                    const response = await chat.send(msg.content, msg.channel.name);
                     msg.channel.stopTyping();
                     waitingForResponse = false;
-                    logger.info(`Bot > ${response}`);
+                    logger.info(`[${msg.channel.name}] Bot > ${response}`);
                     msg.channel.send(response);
                 }
             }
