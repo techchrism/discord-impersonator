@@ -5,6 +5,7 @@ const FileSync = require('lowdb/adapters/FileSync');
 const {createLogger, format, transports} = require('winston');
 const {combine, timestamp, printf} = format;
 require('winston-daily-rotate-file');
+const GPT2Chat = require('./gpt2-chat.js');
 
 // Begin logging
 const fileTransport = new (transports.DailyRotateFile)({
@@ -30,7 +31,8 @@ const logger = createLogger({
 async function writeDefaultConfig()
 {
     return fs.writeFile('config.json', JSON.stringify({
-        token: ''
+        token: '',
+        model: ''
     }, null, 4));
 }
 
@@ -65,26 +67,30 @@ async function loadConfig()
 loadConfig().then(config =>
 {
     logger.info('Loaded config');
-    const adapter = new FileSync('db.json');
-    const db = low(adapter);
-    
-    
-    
-    let client = new Discord.Client();
-    client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
+    logger.info(`Loading model ${config.model}`);
+    const chat = new GPT2Chat(config.model, logger);
+    chat.on('ready', () =>
     {
-        logger.error('Error logging in');
-        logger.error(e);
-    });
-    client.on('shardError', error =>
-    {
-        logger.error('Websocket error', error);
-    });
-    process.on('unhandledRejection', error =>
-    {
-        logger.error('Unhandled promise rejection:', error);
-    });
+        logger.info('Chat ready');
+        const adapter = new FileSync('db.json');
+        const db = low(adapter);
     
+    
+        let client = new Discord.Client();
+        client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
+        {
+            logger.error('Error logging in');
+            logger.error(e);
+        });
+        client.on('shardError', error =>
+        {
+            logger.error('Websocket error', error);
+        });
+        process.on('unhandledRejection', error =>
+        {
+            logger.error('Unhandled promise rejection:', error);
+        });
+    });
 }).catch(e =>
 {
 });
