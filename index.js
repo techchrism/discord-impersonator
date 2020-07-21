@@ -113,6 +113,18 @@ loadConfig().then(config =>
             return db.get('pitChannels').value().indexOf(msg.channel.id) !== -1;
         }
         
+        async function botRespond(msg)
+        {
+            logger.info(`[${msg.channel.name}] ${msg.member.displayName} > ${msg.content}`);
+            waitingForResponse = true;
+            msg.channel.startTyping();
+            const response = await chat.send(msg.content, msg.channel.name);
+            msg.channel.stopTyping();
+            waitingForResponse = false;
+            logger.info(`[${msg.channel.name}] Bot > ${response}`);
+            msg.channel.send(response);
+        }
+        
         let waitingForResponse = false;
         let previousReaction = null;
         let client = new Discord.Client();
@@ -135,12 +147,7 @@ loadConfig().then(config =>
         });
         client.on('message', async msg =>
         {
-            if(msg.member.id === client.user.id)
-            {
-                return;
-            }
-    
-            if(msg.content === config.prefix + 'toggle-msg')
+            if(msg.content === config.prefix + 'toggle-msg' && msg.member.id !== client.user.id)
             {
                 if(msg.channel.type === 'text')
                 {
@@ -164,7 +171,7 @@ loadConfig().then(config =>
                     msg.reply('Goodbye');
                 }
             }
-            else if(msg.content === config.prefix + 'toggle-pit')
+            else if(msg.content === config.prefix + 'toggle-pit' && msg.member.id !== client.user.id)
             {
                 if(msg.channel.type === 'text')
                 {
@@ -190,18 +197,11 @@ loadConfig().then(config =>
                     msg.reply('Removed pit channel');
                 }
             }
-            else if(inMessageChannel(msg) && msg.content && msg.content.length > 0)
+            else if(inMessageChannel(msg) && msg.content && msg.content.length > 0 && msg.member.id !== client.user.id)
             {
                 if(!waitingForResponse)
                 {
-                    logger.info(`[${msg.channel.name}] ${msg.member.displayName} > ${msg.content}`);
-                    waitingForResponse = true;
-                    msg.channel.startTyping();
-                    const response = await chat.send(msg.content, msg.channel.name);
-                    msg.channel.stopTyping();
-                    waitingForResponse = false;
-                    logger.info(`[${msg.channel.name}] Bot > ${response}`);
-                    msg.channel.send(response);
+                    botRespond(msg);
                 }
             }
             else if(inPitChannel(msg) && msg.content && msg.content.length > 0)
@@ -212,7 +212,7 @@ loadConfig().then(config =>
                     previousReaction.reactions.cache.array().filter(r => r.me).forEach(r => r.remove());
                     previousReaction = null;
                 }
-                if(msg.content === '[pit-sync]')
+                if(msg.content === '[pit-sync]' && msg.member.id !== client.user.id)
                 {
                     // Sync reactions in pit so the order stays consistent
                     logger.info(`Running pit sync in ${msg.channel.name}`);
@@ -267,6 +267,46 @@ loadConfig().then(config =>
                         });
                     }
                 }
+            }
+        });
+        
+        client.on('messageReactionAdd', async (reaction, user) =>
+        {
+            if(reaction.partial)
+            {
+                try
+                {
+                    await reaction.fetch();
+                }
+                catch(e)
+                {
+                    logger.error('Error fetching partial reaction: ', e);
+                    return;
+                }
+            }
+            const msg = reaction.message;
+            if(!inPitChannel(msg) || msg.content === '[pit-sync]' || reaction.count === 1)
+            {
+                return;
+            }
+            
+            if(reaction.emoji.name === config['pit-emoji'].name)
+            {
+                reaction.remove();
+                if(waitingForResponse)
+                {
+                    return;
+                }
+                botRespond(msg);
+            }
+            else if(reaction.emoji.name === config['pit-question-emoji'].name)
+            {
+                reaction.remove();
+                if(waitingForResponse)
+                {
+                    return;
+                }
+                
             }
         });
     });
