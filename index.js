@@ -75,7 +75,15 @@ loadConfig().then(config =>
         const adapter = new FileSync('db.json');
         const db = low(adapter);
     
+        db.defaults({
+            messageChannels: []
+        }).write();
     
+        function inMessageChannel(msg)
+        {
+            return db.get('messageChannels').value().indexOf(msg.channel.id) !== -1;
+        }
+        
         let client = new Discord.Client();
         client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
         {
@@ -89,6 +97,40 @@ loadConfig().then(config =>
         process.on('unhandledRejection', error =>
         {
             logger.error('Unhandled promise rejection:', error);
+        });
+        client.on('ready', () =>
+        {
+            logger.info(`Logged in as ${client.user.tag}!`);
+        });
+        client.on('message', msg =>
+        {
+            if(msg.member.id === client.user.id)
+            {
+                return;
+            }
+    
+            if(msg.content === config.prefix + 'toggle')
+            {
+                if(msg.channel.type === 'text')
+                {
+                    if(msg.guild.owner.id !== msg.member.id)
+                    {
+                        msg.reply('Sorry, you must be the owner of this server to do that!');
+                        return;
+                    }
+                }
+        
+                if(!inMessageChannel(msg))
+                {
+                    db.get('messageChannels').push(msg.channel.id).write();
+                    msg.reply('Hello');
+                }
+                else
+                {
+                    db.get('messageChannels').pull(msg.channel.id).write();
+                    msg.reply('Goodbye');
+                }
+            }
         });
     });
 }).catch(e =>
