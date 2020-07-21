@@ -1,14 +1,15 @@
 {
   "name": "discord-impersonator",
   "version": "1.0.0",
-  "description": "",
+  "description": "A discord bot to chat with GPT-2",
+  "repository": "https://github.com/TheTechdoodle/discord-impersonator",
   "main": "index.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
   "keywords": [],
-  "author": "",
-  "license": "ISC",
+  "author": "Techdoodle",
+  "license": "MIT",
   "dependencies": {
     "bufferutil": "^4.0.1",
     "discord.js": "^12.2.0",
