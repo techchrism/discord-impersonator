@@ -77,6 +77,8 @@ def interact_model(
             sys.stdout.write('\n')
             sys.stdout.flush()
             conversation = conversation + reply
+            if len(conversation) > 200:
+                conversation = conversation[len(conversation) - 200]
 
 if __name__ == '__main__':
     fire.Fire(interact_model)

@@ -6,7 +6,7 @@ class GPT2Chat extends EventEmitter
     constructor(modelName, logger)
     {
         super();
-        this.shell = spawn('python', ['gpt-2/chat.py', `--model_name=${modelName}`]);
+        this.shell = spawn('python', ['gpt-2/chat.py', `--model_name=${modelName}`, `--seed=${Math.round(Math.random() * 100000)}`]);
     
         let chatFlag = false;
         let first = true;
