@@ -147,6 +147,30 @@ loadConfig().then(config =>
         client.on('ready', () =>
         {
             logger.info(`Logged in as ${client.user.tag}!`);
+    
+            // Clean up previous reactions
+            let pitChannels = db.get('pitChannels').value();
+            for(let ch of pitChannels)
+            {
+                client.channels.fetch(ch).then(channel =>
+                {
+                    if(['text', 'dm', 'group'].indexOf(channel.type) !== -1)
+                    {
+                        channel.messages.fetch({limit: 20}).then(async messages =>
+                        {
+                            let removal = [];
+                            for(let message of messages.array())
+                            {
+                                for(let ownReaction of message.reactions.cache.array().filter(r => r.me))
+                                {
+                                    removal.push(ownReaction.remove());
+                                }
+                            }
+                            await Promise.all(removal);
+                        });
+                    }
+                });
+            }
         });
         client.on('message', async msg =>
         {
