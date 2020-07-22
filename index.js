@@ -127,7 +127,9 @@ loadConfig().then(config =>
         }
         
         let waitingForResponse = false;
-        let previousReaction = null;
+        let previousReactions = [];
+        let reactionTimeout = null;
+        let collector = null;
         let client = new Discord.Client();
         client.login(config.token).then(r => logger.info('Logged in successfully')).catch(e =>
         {
@@ -207,11 +209,18 @@ loadConfig().then(config =>
             }
             else if(inPitChannel(msg) && msg.content && msg.content.length > 0)
             {
-                if(previousReaction !== null)
+                if(previousReactions.length > 0)
                 {
-                    // Remove own reactions from previous message
-                    previousReaction.reactions.cache.array().filter(r => r.me).forEach(r => r.remove());
-                    previousReaction = null;
+                    let removal = [];
+                    for(let previousMessage of previousReactions)
+                    {
+                        for(let ownReaction of previousMessage.reactions.cache.array().filter(r => r.me))
+                        {
+                            removal.push(ownReaction.remove());
+                        }
+                    }
+                    await Promise.all(removal);
+                    previousReactions = [];
                 }
                 
                 if(msg.content === '[pit-sync]' && msg.member.id !== client.user.id)
@@ -219,7 +228,7 @@ loadConfig().then(config =>
                     // Sync reactions in pit so the order stays consistent
                     logger.info(`Running pit sync in ${msg.channel.name}`);
                     msg.react(config['pit-emoji'].id);
-                    previousReaction = msg;
+                    previousReactions.push(msg);
                     setTimeout(() =>
                     {
                         const reactions = msg.reactions.cache.array().map(r => r.emoji);
@@ -243,9 +252,14 @@ loadConfig().then(config =>
                     }
                     if(order[0] === config['pit-emoji'].name)
                     {
-                        setTimeout(() =>
+                        if(reactionTimeout !== null)
                         {
-                            previousReaction = msg;
+                            clearTimeout(reactionTimeout);
+                        }
+                        reactionTimeout = setTimeout(() =>
+                        {
+                            reactionTimeout = null;
+                            previousReactions.push(msg);
                             msg.react(config['pit-emoji'].id);
                         }, 250);
                     }
@@ -253,10 +267,14 @@ loadConfig().then(config =>
                     {
                         const before = order[order.indexOf(config['pit-emoji'].name) - 1];
                         const filter = r => r.emoji.name === before;
-                        const collector = msg.createReactionCollector(filter, {time: 2000});
+                        if(collector !== null)
+                        {
+                            collector.stop();
+                        }
+                        collector = msg.createReactionCollector(filter, {time: 2000});
                         collector.on('collect', r =>
                         {
-                            previousReaction = msg;
+                            previousReactions.push(msg);
                             msg.react(config['pit-emoji'].id).then(() =>
                             {
                                 // If it's the last in the order, respond with the question
@@ -272,6 +290,7 @@ loadConfig().then(config =>
                             {
                                 logger.warn('Did not collect reaction in time');
                             }
+                            collector = null;
                         });
                     }
                 }
