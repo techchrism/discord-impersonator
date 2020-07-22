@@ -50,6 +50,13 @@ class GPT2Chat extends EventEmitter
     {
         return new Promise(resolve =>
         {
+            if(message === '!memory-hole')
+            {
+                this.conversations[key] = [];
+                resolve('Sorry, what were we talking about?');
+                return;
+            }
+            
             if(!ignoreAdd)
             {
                 this.addToConversation(message, key);
