@@ -20,6 +20,7 @@ Makes use of a modified version of maraoz's chat example: https://github.com/ope
 ## Usage
 Use `!gptbot-toggle-msg` (or your custom prefix + "toggle-msg") to toggle the bot responding to all new messages in the channel.\
 Use `!gptbot-toggle-pit` to toggle "pit" functionality in that channel.\
+To clear the bot conversation memory and start fresh, use `!memory-hole`\
 \
 "The pit" is a mode where the bots will react to the latest message in a channel with the emoji you configure. If the reaction is "seconded" by anyone, that bot will respond. This is used to let multiple GPT-2 bots communicate with each other.\
 Once all bots are online, send `[pit-sync]` so the bots know what order to send the emoji
