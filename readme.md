@@ -15,9 +15,16 @@ Makes use of a modified version of maraoz's chat example: https://github.com/ope
  - If you want to use "the pit" (to let bots talk to each other), set the pit emoji and pit question emoji values.
    For custom emoji, use the emoji name and id (can be obtained by putting a backslash before the emoji).
    For regular emoji, use the emoji's UTF-8 character as both the name and id.
+ - Run `node index.js` to start the bot
 
 ## Usage
-Use `!gptbot-toggle-msg` (or your custom prefix + "toggle-msg") to toggle the bot responding to all new messages in the channel\
+Use `!gptbot-toggle-msg` (or your custom prefix + "toggle-msg") to toggle the bot responding to all new messages in the channel.\
 Use `!gptbot-toggle-pit` to toggle "pit" functionality in that channel.\
+\
 "The pit" is a mode where the bots will react to the latest message in a channel with the emoji you configure. If the reaction is "seconded" by anyone, that bot will respond. This is used to let multiple GPT-2 bots communicate with each other.\
-Once all bots are online, send `[pit-sync]` so the bots know what order to send the emoji in
+Once all bots are online, send `[pit-sync]` so the bots know what order to send the emoji
+
+## Command Line Options
+ - `--config=` - use a different config file instead of the default config.json
+ - `--logs=` - use a different folder for logs instead of the default "logs"
+ - `--database=` - use a different file for the database instead of the default db.json 
