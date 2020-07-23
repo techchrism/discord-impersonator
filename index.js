@@ -47,7 +47,7 @@ async function writeDefaultConfig()
     return fs.writeFile(argv.config || 'config.json', JSON.stringify({
         token: '',
         model: '',
-        prefix: '',
+        prefix: '!gptbot-',
         'pit-emoji': {
             name: '',
             id: ''
