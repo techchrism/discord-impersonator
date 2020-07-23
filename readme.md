@@ -25,6 +25,13 @@ To clear the bot conversation memory and start fresh, use `!memory-hole`\
 "The pit" is a mode where the bots will react to the latest message in a channel with the emoji you configure. If the reaction is "seconded" by anyone, that bot will respond. This is used to let multiple GPT-2 bots communicate with each other.\
 Once all bots are online, send `[pit-sync]` so the bots know what order to send the emoji
 
+## Training
+ - Generate training data by following the instructions at https://github.com/TheTechdoodle/discord-training-generator
+ - Follow the instructions at https://minimaxir.com/2019/09/howto-gpt2/ to train a model with Google Colaboratory
+ - Use the messages.txt file from the training generator
+
+My best results have been obtained using the 124M model with 1000 training steps
+
 ## Command Line Options
  - `--config=` - use a different config file instead of the default config.json
  - `--logs=` - use a different folder for logs instead of the default "logs"
