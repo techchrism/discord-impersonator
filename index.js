@@ -48,6 +48,7 @@ async function writeDefaultConfig()
         token: '',
         model: '',
         prefix: '!gptbot-',
+        removeEveryonePing: true,
         'pit-emoji': {
             name: '',
             id: ''
@@ -119,7 +120,11 @@ loadConfig().then(config =>
             logger.info(`[${msg.channel.name}] ${msg.member.displayName} > ${msg.content}`);
             waitingForResponse = true;
             msg.channel.startTyping();
-            const response = await chat.send(msg.content, msg.channel.id, ignoreAdd);
+            let response = await chat.send(msg.content, msg.channel.id, ignoreAdd);
+            if(config['removeEveryonePing'])
+            {
+                response = response.replace(/@everyone/g, '');
+            }
             msg.channel.stopTyping();
             waitingForResponse = false;
             logger.info(`[${msg.channel.name}] Bot > ${response}`);
